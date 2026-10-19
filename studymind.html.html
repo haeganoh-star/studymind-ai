@@ -1,0 +1,379 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>StudyMind AI — Verity</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#0b0d12;--panel:#131720;--line:#252b38;--gold:#e9c46a;--text:#f3f5f9;--muted:#939bad;--red:#e85b65}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px Inter,system-ui,sans-serif}
+button,input,textarea{font:inherit}
+button{cursor:pointer;border:0;border-radius:10px;padding:11px 15px;font-weight:650}
+button:disabled{opacity:.5;cursor:not-allowed}
+.primary{background:var(--gold);color:#17130a}
+.secondary{background:#222836;color:var(--text);border:1px solid var(--line)}
+.danger{background:#382027;color:#ffb5bc}
+input,textarea{background:#0d1017;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px;width:100%;outline:none}
+input:focus,textarea:focus{border-color:var(--gold)}
+.app{min-height:100dvh;display:flex;flex-direction:column}
+header{height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--line);background:#0b0d12;position:sticky;top:0;z-index:3}
+.brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:19px}
+.logo{width:37px;height:37px;border-radius:12px;background:var(--gold);color:#17130a;display:grid;place-items:center;font-size:21px}
+.brand small{display:block;color:var(--muted);font-size:11px;font-weight:500}
+.status{font-size:12px;color:var(--muted);text-align:right}
+.layout{display:grid;grid-template-columns:245px minmax(0,1fr);flex:1;min-height:0}
+aside{border-right:1px solid var(--line);padding:17px;display:flex;flex-direction:column;gap:12px}
+.side-title{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin:10px 0 2px}
+#chatList{display:flex;flex-direction:column;gap:5px}
+.chat-item{text-align:left;background:transparent;color:#cbd0dc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.chat-item:hover,.chat-item.active{background:#202634;color:white}
+.side-bottom{margin-top:auto;display:grid;gap:10px}
+main{display:flex;flex-direction:column;min-width:0;min-height:calc(100dvh - 68px);max-width:1050px;width:100%;margin:0 auto}
+.welcome{text-align:center;padding:45px 20px 22px}
+.orb{width:66px;height:66px;margin:0 auto 18px;border-radius:22px;display:grid;place-items:center;background:linear-gradient(135deg,#e9c46a,#f5e4a5);color:#17130a;font-size:34px;box-shadow:0 0 45px #e9c46a18}
+h1{font-size:clamp(27px,4vw,40px);margin:0 0 10px;letter-spacing:-1.3px}
+.gold{color:var(--gold)}
+.sub{color:var(--muted);line-height:1.65;max-width:490px;margin:0 auto}
+.suggestions{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;margin-top:22px}
+.suggestions button{background:var(--panel);border:1px solid var(--line);color:#d9deea;font-size:12px}
+#messages{padding:10px 20px 22px;display:flex;flex-direction:column;gap:18px;flex:1}
+.message{display:flex;gap:11px;align-items:flex-start;max-width:100%}
+.avatar{width:33px;height:33px;border-radius:11px;background:#252a37;display:grid;place-items:center;flex-shrink:0}
+.message.user .avatar{background:#453c27;color:var(--gold)}
+.bubble{line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.message.user .bubble{background:#1b202c;border:1px solid var(--line);padding:12px 15px;border-radius:5px 14px 14px 14px}
+.who{font-size:11px;color:var(--muted);margin-bottom:4px}
+.preview{max-width:240px;max-height:200px;object-fit:contain;border-radius:10px;display:block;margin-top:8px}
+.composer-wrap{position:sticky;bottom:0;padding:12px 20px 20px;background:linear-gradient(transparent,var(--bg) 15%)}
+.composer{border:1px solid #303748;background:var(--panel);border-radius:16px;padding:12px;box-shadow:0 8px 35px #0003}
+#prompt{resize:none;min-height:48px;max-height:160px;border:0;background:transparent;padding:7px}
+.tools{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tool-left,.tool-right{display:flex;align-items:center;gap:7px}
+.icon-btn{background:transparent;color:var(--muted);padding:8px 10px}
+.icon-btn:hover{background:#242a37;color:white}
+#send{min-width:76px}
+.hint{text-align:center;font-size:11px;color:#737d91;padding-top:10px}
+.hidden{display:none!important}
+#authScreen{position:fixed;inset:0;z-index:10;background:#0b0d12;display:grid;place-items:center;padding:20px;overflow:auto}
+.auth-card{width:min(100%,420px);background:var(--panel);border:1px solid var(--line);padding:27px;border-radius:20px}
+.auth-card h2{margin:0 0 8px;font-size:26px}
+.auth-card p{color:var(--muted);line-height:1.5;font-size:13px}
+.auth-card form{display:grid;gap:12px;margin-top:22px}
+.auth-card label{font-size:12px;color:#c9cfdd;display:grid;gap:7px}
+.auth-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+#authMessage{color:var(--gold);font-size:12px;overflow-wrap:anywhere;margin-top:14px}
+#configNotice{background:#332a18;color:#f5dfa0;border:1px solid #69562a;padding:12px;border-radius:10px;font-size:12px;line-height:1.5;margin-top:12px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#292f3d;padding:12px 17px;border-radius:12px;z-index:20;max-width:90%;font-size:13px}
+@media(max-width:700px){
+ .layout{grid-template-columns:1fr}
+ aside{border-right:0;border-bottom:1px solid var(--line);padding:10px 13px}
+ aside .side-title,aside .side-bottom{display:none}
+ #chatList{flex-direction:row;overflow-x:auto}
+ .chat-item{max-width:155px;flex-shrink:0}
+ main{min-height:calc(100dvh - 140px)}
+ header{padding:0 14px}
+ .welcome{padding-top:32px}
+ #messages{padding-left:14px;padding-right:14px}
+ .composer-wrap{padding:10px}
+ .status{max-width:120px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand"><div class="logo">✦</div><div>StudyMind AI<small>Powered by curiosity</small></div></div>
+  <div class="status" id="accountStatus">Not connected</div>
+</header>
+<div class="layout">
+  <aside>
+    <button class="primary" id="newChat">＋ New chat</button>
+    <div class="side-title">Your conversations</div>
+    <div id="chatList"></div>
+    <div class="side-bottom">
+      <div class="side-title">Account</div>
+      <button class="secondary" id="accountButton">Sign in</button>
+      <button class="secondary hidden" id="signOut">Sign out</button>
+    </div>
+  </aside>
+  <main>
+    <section class="welcome" id="welcome">
+      <div class="orb">✦</div>
+      <h1>Learn smarter with <span class="gold">Verity.</span></h1>
+      <p class="sub">Your study companion for understanding tough topics, solving problems and building confidence, one question at a time.</p>
+      <div class="suggestions">
+        <button data-prompt="Explain fractions with examples">📘 Explain a topic</button>
+        <button data-prompt="Help me solve a maths problem step by step">🧮 Solve maths</button>
+        <button data-prompt="Quiz me on science and explain my mistakes">🧪 Test my knowledge</button>
+        <button data-prompt="Help me plan a study timetable">🗓️ Make a study plan</button>
+      </div>
+    </section>
+    <section id="messages" aria-live="polite"></section>
+    <div class="composer-wrap">
+      <div class="composer">
+        <div id="imageLabel" class="hidden" style="font-size:12px;color:var(--gold);padding:4px 8px"></div>
+        <textarea id="prompt" rows="1" placeholder="Ask Verity anything about your studies…"></textarea>
+        <div class="tools">
+          <div class="tool-left">
+            <button class="icon-btn" id="attach" title="Attach an image">＋ Photo</button>
+            <input class="hidden" id="imageInput" type="file" accept="image/*">
+          </div>
+          <div class="tool-right"><span style="font-size:11px;color:var(--muted)" id="modeLabel">Demo mode</span><button class="primary" id="send">Send ↑</button></div>
+        </div>
+      </div>
+      <div class="hint">Verity can make mistakes. Check important answers with your teacher or textbook.</div>
+    </div>
+  </main>
+</div>
+</div>
+
+<div id="authScreen">
+ <div class="auth-card">
+  <div class="brand" style="margin-bottom:24px"><div class="logo">✦</div><div>StudyMind AI<small>Your learning space</small></div></div>
+  <h2 id="authTitle">Welcome back.</h2>
+  <p id="authSubtitle">Sign in to access your saved conversations, or continue as a guest.</p>
+  <form id="authForm">
+   <label>Email address<input id="email" type="email" autocomplete="email" placeholder="you@example.com" required></label>
+   <label>Password<input id="password" type="password" autocomplete="current-password" minlength="6" placeholder="At least 6 characters" required></label>
+   <button class="primary" id="authSubmit" type="submit">Sign in</button>
+  </form>
+  <div class="auth-actions">
+   <button class="secondary" id="toggleAuth">Create account</button>
+   <button class="secondary" id="guest">Continue as guest</button>
+  </div>
+  <button class="icon-btn" id="skipAuth" style="width:100%;margin-top:9px">Back to app</button>
+  <div id="authMessage" role="status"></div>
+  <div id="configNotice">Setup needed: add your Supabase Project URL and publishable key in the code before signing in. Keep secret keys out of this file.</div>
+ </div>
+</div>
+<div id="toast" class="hidden"></div>
+
+<script>
+/* 1. Replace these two placeholders with your Supabase project details.
+   Use the Project URL and sb_publishable_... key, never a service-role key. */
+const SUPABASE_URL = "https://rvztwkkpymqptwkfpxdb.supabase.coF";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_E9f6nvK427_kYiMtazQfpg_qD4f9e97";
+
+/* Optional: deploy a secure Supabase Edge Function named "verity-chat"
+   to enable actual AI responses. Never put an AI secret key in this file. */
+const AI_FUNCTION_NAME = "verity-chat";
+
+const $ = id => document.getElementById(id);
+let db = null, user = null, currentChat = null, chats = [];
+let isSignup = false, selectedImage = null, sending = false;
+let demoMode = true;
+
+function configured(){
+ return SUPABASE_URL.startsWith("https://") &&
+ !SUPABASE_URL.includes("PASTE_") &&
+ SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
+}
+function toast(msg){
+ $("toast").textContent=msg;$("toast").classList.remove("hidden");
+ setTimeout(()=>$("toast").classList.add("hidden"),3000);
+}
+function escapeHtml(s){
+ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function setAuthMessage(s){$("authMessage").textContent=s;}
+function showAuth(show){$("authScreen").classList.toggle("hidden",!show);}
+function updateAuthUI(){
+ $("accountStatus").textContent=user?
+ (user.is_anonymous?"Guest session":(user.email||"Signed in")):"Not signed in";
+ $("accountButton").classList.toggle("hidden",!!user);
+ $("signOut").classList.toggle("hidden",!user);
+ $("modeLabel").textContent=demoMode?"Demo mode":"AI backend connected";
+ $("configNotice").classList.toggle("hidden",configured());
+}
+function newChat(){
+ currentChat=null;
+ $("messages").innerHTML="";
+ $("welcome").classList.remove("hidden");
+ $("chatList").querySelectorAll(".chat-item").forEach(x=>x.classList.remove("active"));
+ $("prompt").focus();
+}
+function addMessage(role,content,imageUrl){
+ $("welcome").classList.add("hidden");
+ const row=document.createElement("div");
+ row.className="message "+(role==="user"?"user":"assistant");
+ const avatar=document.createElement("div");avatar.className="avatar";avatar.textContent=role==="user"?"You":"✦";
+ const body=document.createElement("div");body.style.minWidth="0";body.style.flex="1";
+ const who=document.createElement("div");who.className="who";who.textContent=role==="user"?"You":"Verity";
+ const bubble=document.createElement("div");bubble.className="bubble";bubble.textContent=content;
+ body.append(who,bubble);
+ if(imageUrl){const im=document.createElement("img");im.src=imageUrl;im.className="preview";im.alt="Attached study image";body.append(im);}
+ row.append(avatar,body);$("messages").append(row);
+ row.scrollIntoView({block:"nearest",behavior:"smooth"});
+ return row;
+}
+function renderChatList(){
+ const list=$("chatList");list.innerHTML="";
+ chats.forEach(chat=>{
+  const b=document.createElement("button");b.className="chat-item"+(chat.id===currentChat?" active":"");
+  b.textContent=chat.title||"New chat";b.title=b.textContent;
+  b.onclick=()=>openChat(chat.id);list.append(b);
+ });
+}
+async function loadChats(){
+ if(!db||!user)return;
+ const {data,error}=await db.from("chats").select("id,title,messages,created_at,updated_at").eq("user_id",user.id).order("updated_at",{ascending:false}).limit(30);
+ if(error){console.error(error);toast("Couldn't load saved chats: "+error.message);return;}
+ chats=data||[];renderChatList();
+}
+async function openChat(id){
+ const chat=chats.find(c=>c.id===id);if(!chat)return;
+ currentChat=id;$("messages").innerHTML="";$("welcome").classList.add("hidden");
+ (Array.isArray(chat.messages)?chat.messages:[]).forEach(m=>addMessage(m.role,m.content||""));
+ renderChatList();
+}
+async function saveChat(){
+ if(!db||!user)return null;
+ const items=[...$("messages").querySelectorAll(".message")].map(row=>({
+  role:row.classList.contains("user")?"user":"assistant",
+  content:row.querySelector(".bubble")?.textContent||""
+ }));
+ const first=items.find(m=>m.role==="user")?.content||"New chat";
+ const title=first.length>42?first.slice(0,39)+"...":first;
+ const now=new Date().toISOString();
+ if(currentChat){
+  const {error}=await db.from("chats").update({messages:items,title,updated_at:now}).eq("id",currentChat).eq("user_id",user.id);
+  if(error)throw error;
+ }else{
+  const {data,error}=await db.from("chats").insert({user_id:user.id,title,messages:items,updated_at:now}).select("id").single();
+  if(error)throw error;
+  currentChat=data.id;
+ }
+ await loadChats();return currentChat;
+}
+function demoReply(q){
+ const text=q.toLowerCase();
+ if(text.includes("fraction"))return "Let's learn fractions! 📘\n\nA fraction shows part of a whole. In 3/4, the top number (3) is the numerator, and the bottom number (4) is the denominator.\n\nExample: If a pizza has 4 equal slices and you eat 3, you ate 3/4 of the pizza.\n\nTry this: What is 1/2 + 1/4? Find a common denominator of 4, then add the numerators.";
+ if(text.includes("math")||text.includes("solve"))return "Let's solve it step by step! 🧮\n\nPlease type the full maths question, including any numbers or diagrams. I'll help you understand the method rather than just giving you an answer.";
+ if(text.includes("quiz")||text.includes("science"))return "Let's start a science quiz! 🧪\n\nQuestion 1: What process do green plants use to make their own food using sunlight?\n\nA) Respiration\nB) Photosynthesis\nC) Evaporation\nD) Condensation\n\nReply with A, B, C or D, and I'll help you understand the answer.";
+ if(text.includes("study plan")||text.includes("timetable"))return "Here's a simple study plan to start with:\n\n• 25 minutes: revise one topic\n• 5 minutes: take a break\n• 20 minutes: practise questions\n• 10 minutes: mark your work and review mistakes\n\nWhich subjects are you studying, and when are your exams? I can help tailor this plan.";
+ return "Hi! I'm Verity, your StudyMind AI study companion. ✦\n\nI'm currently running in demo mode, so I can't generate a real AI answer yet. I can show sample study help, but to answer your own questions intelligently we need to connect a secure AI backend.\n\nTry asking me to explain fractions, practise science, or plan a study timetable.";
+}
+async function getVerityReply(history){
+ if(db&&user){
+  try{
+   const {data,error}=await db.functions.invoke(AI_FUNCTION_NAME,{body:{messages:history}});
+   if(!error&&data&&data.reply){demoMode=false;updateAuthUI();return data.reply;}
+   console.info("AI function not ready:",error||data);
+  }catch(e){console.info("AI backend not configured:",e);}
+ }
+ demoMode=true;updateAuthUI();
+ return demoReply(history[history.length-1]?.content||"");
+}
+async function sendMessage(){
+ if(sending)return;
+ const text=$("prompt").value.trim();
+ if(!text&&!selectedImage)return;
+ if(!user){showAuth(true);setAuthMessage("Sign in or continue as a guest to start chatting.");return;}
+ sending=true;$("send").disabled=true;
+ const imageUrl=selectedImage?URL.createObjectURL(selectedImage):null;
+ addMessage("user",text||"Please help me understand this image.",imageUrl);
+ $("prompt").value="";$("prompt").style.height="auto";
+ const imageFile=selectedImage;selectedImage=null;$("imageLabel").classList.add("hidden");
+ const wait=addMessage("assistant","Verity is thinking…");
+ try{
+  await saveChat();
+  const history=[...$("messages").querySelectorAll(".message")].map(row=>({
+   role:row.classList.contains("user")?"user":"assistant",
+   content:row.querySelector(".bubble")?.textContent||""
+  })).filter(m=>m.content!=="Verity is thinking…");
+  const reply=await getVerityReply(history);
+  wait.querySelector(".bubble").textContent=reply;
+  await saveChat();
+  if(imageFile)toast("Image preview attached. Image upload to cloud storage needs configuring.");
+ }catch(e){
+  wait.querySelector(".bubble").textContent="I couldn't save this chat. Check your Supabase settings and try again.";
+  console.error(e);
+ }finally{
+  sending=false;$("send").disabled=false;
+ }
+}
+async function init(){
+ if(!configured()||!window.supabase){
+  updateAuthUI();showAuth(true);return;
+ }
+ try{
+  db=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+  $("configNotice").classList.add("hidden");
+  const {data:{session}}=await db.auth.getSession();
+  if(session){user=session.user;showAuth(false);await loadChats();}
+  updateAuthUI();
+  db.auth.onAuthStateChange(async(_event,session)=>{
+   user=session?.user||null;updateAuthUI();
+   if(user){showAuth(false);await loadChats();}
+   else{chats=[];renderChatList();}
+  });
+ }catch(e){setAuthMessage("Connection error: "+e.message);showAuth(true);}
+}
+$("authForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+ if(!configured()||!db){setAuthMessage("First add your Supabase URL and publishable key in the code.");return;}
+ const email=$("email").value.trim(),password=$("password").value;
+ $("authSubmit").disabled=true;setAuthMessage("Please wait…");
+ try{
+  if(isSignup){
+   const {data,error}=await db.auth.signUp({email,password});
+   if(error)throw error;
+   setAuthMessage(data.session?"Account created!":"Account created. Check your email to confirm your address, then sign in.");
+  }else{
+   const {error}=await db.auth.signInWithPassword({email,password});
+   if(error)throw error;
+   setAuthMessage("Signed in!");
+  }
+ }catch(e){setAuthMessage(e.message);}
+ finally{$("authSubmit").disabled=false;}
+});
+$("toggleAuth").onclick=()=>{
+ isSignup=!isSignup;
+ $("authTitle").textContent=isSignup?"Create your account.":"Welcome back.";
+ $("authSubtitle").textContent=isSignup?"Create an account to save your study chats.":"Sign in to access your saved conversations, or continue as a guest.";
+ $("authSubmit").textContent=isSignup?"Create account":"Sign in";
+ $("toggleAuth").textContent=isSignup?"I already have an account":"Create account";
+ $("password").autocomplete=isSignup?"new-password":"current-password";
+ setAuthMessage("");
+};
+$("guest").onclick=async()=>{
+ if(!configured()||!db){setAuthMessage("Add your Supabase URL and publishable key first.");return;}
+ $("guest").disabled=true;setAuthMessage("Creating guest session…");
+ try{
+  const {error}=await db.auth.signInAnonymously();if(error)throw error;
+  showAuth(false);toast("Guest session started!");
+ }catch(e){setAuthMessage("Guest sign-in failed: "+e.message);}
+ finally{$("guest").disabled=false;}
+};
+$("skipAuth").onclick=()=>{if(user)showAuth(false);else setAuthMessage("Sign in or continue as a guest to use chat.");};
+$("accountButton").onclick=()=>{showAuth(true);};
+$("signOut").onclick=async()=>{
+ if(db){const {error}=await db.auth.signOut();if(error){toast(error.message);return;}}
+ user=null;currentChat=null;chats=[];renderChatList();newChat();showAuth(true);updateAuthUI();
+};
+$("newChat").onclick=newChat;
+$("send").onclick=sendMessage;
+$("prompt").addEventListener("keydown",e=>{
+ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage();}
+});
+$("prompt").addEventListener("input",e=>{
+ e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,160)+"px";
+});
+$("attach").onclick=()=>$("imageInput").click();
+$("imageInput").onchange=e=>{
+ selectedImage=e.target.files?.[0]||null;
+ if(selectedImage){
+  $("imageLabel").textContent="Attached: "+selectedImage.name+" (preview only)";
+  $("imageLabel").classList.remove("hidden");
+ }
+};
+document.querySelectorAll("[data-prompt]").forEach(b=>b.onclick=()=>{
+ $("prompt").value=b.dataset.prompt;$("prompt").focus();
+});
+init();
+</script>
+</body>
+</html>
